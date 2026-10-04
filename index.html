@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meetly – meet new people</title>
+<style>
+:root{--bg:#f5f2fa;--card:#fff;--ink:#2a1b3d;--mut:#6d6280;--line:#ddd5ea;--rose:#e8436b;--plum:#3d2362;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17102a;--card:#231a3a;--ink:#f1ecf9;--mut:#a99dc0;--line:#382c55;--plum:#2c1b4d}}
+:root[data-theme="dark"]{--bg:#17102a;--card:#231a3a;--ink:#f1ecf9;--mut:#a99dc0;--line:#382c55;--plum:#2c1b4d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.w{max-width:760px;margin:0 auto;padding:0 16px}
+header{background:var(--plum);color:#fff}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0;flex-wrap:wrap}
+.logo{font:800 24px Georgia,serif;letter-spacing:-.02em}.logo i{color:var(--rose);font-style:normal}
+.tabs{display:flex;gap:4px}
+.tabs button{background:none;border:0;color:#fff;opacity:.75;padding:8px 12px;border-radius:6px;font:inherit;cursor:pointer}
+.tabs button[aria-current="true"]{opacity:1;background:rgba(255,255,255,.16)}
+main{padding:24px 0 48px}
+h1{font:800 clamp(30px,6vw,44px)/1.08 Georgia,serif;margin:0 0 10px;letter-spacing:-.02em}
+h2{margin:0 0 12px;font-size:22px}
+p.s{color:var(--mut);margin:0 0 18px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
+input[type=checkbox],input[type=radio]{width:auto;margin-right:8px}
+.chk{display:flex;align-items:flex-start;font-weight:400;margin-top:14px}
+.btn{background:var(--rose);color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;font-weight:700;cursor:pointer;margin-top:16px}
+.btn.o{background:none;color:var(--ink);border:1.5px solid var(--line);margin-top:0}
+.btn.sm{padding:8px 14px;margin-top:0;font-size:14px}
+.seg{display:flex;gap:6px;margin-bottom:6px}
+.seg button{flex:1;padding:9px;border:1.5px solid var(--line);background:none;color:var(--ink);border-radius:8px;font:inherit;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.note{background:#fff4d6;color:#4a3a00;border-radius:8px;padding:10px 12px;font-size:14px;margin:12px 0}
+.err{color:#d12f3f;font-size:14px;margin-top:8px;min-height:1em}
+.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}
+.f label{margin:0 0 2px;font-size:12px}
+.pc{display:flex;gap:14px}
+.ph{width:72px;height:72px;border-radius:12px;background:var(--rose);color:#fff;display:grid;place-items:center;font:800 26px Georgia,serif;overflow:hidden;flex:none}
+.ph img{width:100%;height:100%;object-fit:cover}
+.pc h3{margin:0;font-size:18px}.pc small{color:var(--mut)}
+.tag{display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px;margin:6px 6px 0 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.empty{text-align:center;color:var(--mut);padding:30px 16px;border:1.5px dashed var(--line);border-radius:12px}
+.chat{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.m{padding:8px 12px;border-radius:12px;background:var(--bg);max-width:80%}.m.me{align-self:flex-end;background:var(--rose);color:#fff}
+:focus-visible{outline:3px solid var(--rose);outline-offset:2px}
+footer{text-align:center;color:var(--mut);font-size:13px;padding:0 16px 24px}
+</style>
+</head>
+<body>
+<header><div class="w"><div class="nav"><div class="logo">Meetly<i>.</i></div><div class="tabs" id="tabs"></div></div></div></header>
+<main class="w" id="app"></main>
+<footer>Prototype: nothing is sent or saved on a server, and no one else can see your profile yet.</footer>
+<script>
+var S={view:"auth",mode:"email",step:"contact",contact:"",code:"",me:null,people:[],conns:[],blocked:[],reports:{},chat:null,f:{city:"",min:"",max:"",int:"",want:""},err:""};
+var $=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function go(v){S.view=v;S.err="";render()}
+function tabs(){
+ if(!S.me){$("tabs").innerHTML="";return}
+ var t=[["browse","Browse"],["inbox","Inbox"],["profile","My profile"]];
+ $("tabs").innerHTML=t.map(function(x){return '<button data-v="'+x[0]+'" aria-current="'+(S.view===x[0])+'">'+x[1]+'</button>'}).join("")+'<button data-v="out">Log out</button>';
+}
+$("tabs").onclick=function(e){var v=e.target.dataset.v;if(!v)return;if(v==="out"){S.me=null;S.step="contact";S.view="auth";S.chat=null}else{S.chat=null;S.view=v}render()};
+function ph(p){return '<div class="ph">'+(p.photo?'<img alt="" src="'+p.photo+'">':esc((p.name||"?")[0].toUpperCase()))+'</div>'}
+function auth(){
+ var m=S.mode==="email",h='<h1>Meet new people.<br>Friends or dates.</h1><p class="s">Free for everyone, all genders. Log in with a one-time code.</p><div class="box">';
+ if(S.step==="contact"){
+  h+='<div class="seg"><button data-m="email" aria-pressed="'+m+'">Email</button><button data-m="mobile" aria-pressed="'+!m+'">Mobile number</button></div>'
+  +'<label for="ct">'+(m?"Email address":"Mobile number")+'</label><input id="ct" type="'+(m?"email":"tel")+'" inputmode="'+(m?"email":"tel")+'" value="'+esc(S.contact)+'">'
+  +'<label class="chk"><input type="checkbox" id="age18"> I am 18 or older and agree to be respectful to others.</label>'
+  +'<div class="err">'+esc(S.err)+'</div><button class="btn" id="send">Send code</button>';
+ }else{
+  h+='<p>Enter the 6-digit code for <b>'+esc(S.contact)+'</b>.</p><div class="note">Prototype only: no real message is sent. Your code is <b>'+S.code+'</b>.</div>'
+  +'<label for="cd">Code</label><input id="cd" inputmode="numeric" maxlength="6" autocomplete="one-time-code">'
+  +'<div class="err">'+esc(S.err)+'</div><div class="row"><button class="btn" id="ver">Verify and continue</button><button class="btn o" id="back" style="margin-top:16px">Change</button></div>';
+ }
+ return h+'</div>';
+}
+function profile(){
+ var p=S.me.profile||{},g=p.gender||"";
+ var opts=["Woman","Man","Non-binary","Prefer to self-describe"].map(function(o){return '<option'+(g===o?" selected":"")+'>'+o+'</option>'}).join("");
+ return '<h2>'+(S.me.profile?"My profile":"Create your profile")+'</h2><p class="s">Your email and phone number are never shown to others.</p><div class="box">'
+ +'<label for="pn">Name</label><input id="pn" value="'+esc(p.name)+'">'
+ +'<label for="pa">Age (18 or older)</label><input id="pa" type="number" min="18" max="99" value="'+esc(p.age)+'">'
+ +'<label for="pg">Gender</label><select id="pg">'+opts+'</select>'
+ +'<input id="pgs" placeholder="Describe in your own words" value="'+esc(p.gself)+'" style="margin-top:6px'+(g==="Prefer to self-describe"?"":";display:none")+'">'
+ +'<label for="pc">City</label><input id="pc" value="'+esc(p.city)+'">'
+ +'<label for="pb">Short bio</label><textarea id="pb" rows="3" maxlength="200">'+esc(p.bio)+'</textarea>'
+ +'<label for="pi">Interests (separate with commas)</label><input id="pi" value="'+esc(p.interests)+'">'
+ +'<label for="pw">I am looking for</label><select id="pw">'+["Friendship","Dating","Both"].map(function(o){return '<option'+(p.want===o?" selected":"")+'>'+o+'</option>'}).join("")+'</select>'
+ +'<label for="pp">Profile photo</label><input id="pp" type="file" accept="image/*">'
+ +'<div class="err">'+esc(S.err)+'</div><button class="btn" id="savep">Save profile</button></div>';
+}
+function browse(){
+ var f=S.f,list=S.people.filter(function(p){
+  if(S.blocked.indexOf(p.id)>-1||(S.reports[p.id]||0)>=3)return false;
+  if(f.city&&p.city.toLowerCase().indexOf(f.city.toLowerCase())<0)return false;
+  if(f.min&&p.age<+f.min)return false;if(f.max&&p.age>+f.max)return false;
+  if(f.int&&(p.interests||"").toLowerCase().indexOf(f.int.toLowerCase())<0)return false;
+  if(f.want&&p.want!==f.want&&p.want!=="Both")return false;return true});
+ var h='<h2>Browse people</h2><div class="f">'
+ +'<div><label for="fc">City</label><input id="fc" value="'+esc(f.city)+'"></div>'
+ +'<div><label for="fmin">Min age</label><input id="fmin" type="number" min="18" value="'+esc(f.min)+'"></div>'
+ +'<div><label for="fmax">Max age</label><input id="fmax" type="number" min="18" value="'+esc(f.max)+'"></div>'
+ +'<div><label for="fi">Interest</label><input id="fi" value="'+esc(f.int)+'"></div>'
+ +'<div><label for="fw">Looking for</label><select id="fw"><option value="">Any</option>'+["Friendship","Dating"].map(function(o){return '<option'+(f.want===o?" selected":"")+'>'+o+'</option>'}).join("")+'</select></div></div>';
+ if(!list.length)return h+'<div class="empty"><b>No one is here yet.</b><br>Be the first to join, then share this site with friends so they can find you.</div>';
+ return h+list.map(function(p){
+  return '<div class="box"><div class="pc">'+ph(p)+'<div><h3>'+esc(p.name)+', '+esc(p.age)+'</h3><small>'+esc(p.city)+' · '+esc(p.want)+'</small></div></div>'
+  +'<p>'+esc(p.bio)+'</p>'+(p.interests||"").split(",").filter(Boolean).map(function(t){return '<span class="tag">'+esc(t.trim())+'</span>'}).join("")
+  +'<div class="row"><button class="btn sm" data-hi="'+p.id+'">Say hi</button><button class="btn o sm" data-blk="'+p.id+'">Block</button><button class="btn o sm" data-rep="'+p.id+'">Report</button></div></div>'}).join("");
+}
+function who(id){return S.people.filter(function(p){return p.id===id})[0]||{name:"Someone"}}
+function inbox(){
+ if(S.chat!==null){
+  var c=S.conns[S.chat];
+  return '<button class="btn o sm" id="bk">Back</button><h2 style="margin-top:12px">Chat with '+esc(who(c.from===S.me.id?c.to:c.from).name)+'</h2><div class="box"><div class="chat">'
+  +c.msgs.map(function(m){return '<div class="m'+(m.by===S.me.id?" me":"")+'">'+esc(m.t)+'</div>'}).join("")+'</div>'
+  +'<input id="mt" placeholder="Write a message"><div class="row"><button class="btn sm" id="sm">Send</button><button class="btn o sm" data-blk="'+(c.from===S.me.id?c.to:c.from)+'">Block</button><button class="btn o sm" data-rep="'+(c.from===S.me.id?c.to:c.from)+'">Report</button></div></div>';
+ }
+ var mine=S.conns.map(function(c,i){c.i=i;return c}).filter(function(c){return c.to===S.me.id||c.from===S.me.id});
+ if(!mine.length)return '<h2>Inbox</h2><div class="empty">No requests yet. When someone says hi, it shows up here.</div>';
+ return '<h2>Inbox</h2>'+mine.map(function(c){
+  var inc=c.to===S.me.id,o=who(inc?c.from:c.to);
+  return '<div class="box"><b>'+esc(o.name)+'</b><p>'+esc(c.msg)+'</p>'+(c.st==="pending"&&inc?'<div class="row"><button class="btn sm" data-acc="'+c.i+'">Accept</button><button class="btn o sm" data-dec="'+c.i+'">Decline</button></div>':c.st==="accepted"?'<button class="btn sm" data-chat="'+c.i+'">Open chat</button>':'<small>'+(c.st==="pending"?"Waiting for reply":"Declined")+'</small>')+'</div>'}).join("");
+}
+function render(){
+ tabs();var a=$("app");
+ a.innerHTML=!S.me?auth():S.view==="profile"?profile():S.view==="inbox"?inbox():browse();
+}
+document.addEventListener("click",function(e){
+ var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+ if(d.m){S.mode=d.m;render()}
+ else if(b.id==="send"){
+  var v=$("ct").value.trim(),ok=S.mode==="email"?/^\S+@\S+\.\S+$/.test(v):/^\+?[0-9 ]{10,14}$/.test(v);
+  if(!ok){S.err=S.mode==="email"?"Enter a valid email address.":"Enter a valid mobile number.";S.contact=v;render();return}
+  if(!$("age18").checked){S.err="You must be 18 or older to join.";S.contact=v;render();return}
+  S.contact=v;S.code=String(Math.floor(100000+Math.random()*900000));S.step="code";S.err="";render()}
+ else if(b.id==="back"){S.step="contact";S.err="";render()}
+ else if(b.id==="ver"){
+  if($("cd").value.trim()!==S.code){S.err="That code is not correct. Check it and try again.";render();return}
+  S.me={id:"me",contact:S.contact,profile:null};S.view="profile";render()}
+ else if(b.id==="savep"){
+  var n=$("pn").value.trim(),age=+$("pa").value,c=$("pc").value.trim();
+  if(!n||!c){S.err="Add your name and city.";render();return}
+  if(!(age>=18)){S.err="You must be 18 or older.";render();return}
+  var g=$("pg").value,old=S.me.profile||{};
+  S.me.profile={id:"me",name:n,age:age,gender:g,gself:$("pgs").value.trim(),city:c,bio:$("pb").value.trim(),interests:$("pi").value.trim(),want:$("pw").value,photo:old.photo||""};
+  var file=$("pp").files[0];
+  if(file){var r=new FileReader();r.onload=function(){S.me.profile.photo=r.result;go("browse")};r.readAsDataURL(file)}else go("browse")}
+ else if(d.hi){var m=prompt("Write a short hello:");if(m){S.conns.push({from:S.me.id,to:d.hi,msg:m,st:"pending",msgs:[]});alert("Request sent. Chat opens when they accept.")}}
+ else if(d.blk){if(confirm("Block this person? You will not see each other.")){S.blocked.push(d.blk);S.chat=null;go("browse")}}
+ else if(d.rep){S.reports[d.rep]=(S.reports[d.rep]||0)+1;alert("Report sent. Profiles with several reports are hidden from search.")}
+ else if(d.acc){S.conns[+d.acc].st="accepted";render()}
+ else if(d.dec){S.conns[+d.dec].st="declined";render()}
+ else if(d.chat){S.chat=+d.chat;render()}
+ else if(b.id==="bk"){S.chat=null;render()}
+ else if(b.id==="sm"){var t=$("mt").value.trim();if(t){S.conns[S.chat].msgs.push({by:S.me.id,t:t});render()}}
+});
+document.addEventListener("change",function(e){
+ var t=e.target;
+ if(t.id==="pg"){$("pgs").style.display=t.value==="Prefer to self-describe"?"":"none"}
+ var k={fc:"city",fmin:"min",fmax:"max",fi:"int",fw:"want"}[t.id];if(k){S.f[k]=t.value;render()}
+});
+render();
+</script>
+</body>
+</html>
